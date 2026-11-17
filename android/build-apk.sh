@@ -12,6 +12,8 @@ KEYSTORE="${VIOLET_KEYSTORE:-$ANDROID/violet.keystore}"
 STOREPASS="${VIOLET_STOREPASS:-violet-photo-editor}"
 KEYPASS="${VIOLET_KEYPASS:-$STOREPASS}"
 ALIAS="${VIOLET_KEY_ALIAS:-violet}"
+VERSION_CODE="${VERSION_CODE:-1}"
+VERSION_NAME="${VERSION_NAME:-1.0.0}"
 
 # aapt2 / zipalign / apksigner are native tools, so on ARM hosts use the
 # distro-provided ARM builds instead of Google's x86_64 binaries.
@@ -45,8 +47,8 @@ mkdir -p "$OUT/compiled" "$OUT/classes" "$OUT/dex" "$OUT/gen"
   --manifest "$SRC/AndroidManifest.xml" \
   -R "$OUT/compiled/res.zip" \
   --java "$OUT/gen" \
-  --version-code 1 \
-  --version-name 1.0.0 \
+  --version-code "$VERSION_CODE" \
+  --version-name "$VERSION_NAME" \
   --auto-add-overlay
 
 echo "==> Compiling Java"
