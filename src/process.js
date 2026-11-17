@@ -53,6 +53,17 @@ export function computeEnhanceParams(imageData) {
   };
 }
 
+export function cropCanvas(source, crop) {
+  const cw = Math.max(1, Math.min(crop.w, source.width - crop.x));
+  const ch = Math.max(1, Math.min(crop.h, source.height - crop.y));
+  const cx = clamp(crop.x, 0, source.width - 1);
+  const cy = clamp(crop.y, 0, source.height - 1);
+  const cc = document.createElement('canvas');
+  cc.width = cw; cc.height = ch;
+  cc.getContext('2d').drawImage(source, cx, cy, cw, ch, 0, 0, cw, ch);
+  return cc;
+}
+
 export function buildGeometryCanvas(img, rotation, crop) {
   const w0 = img.naturalWidth;
   const h0 = img.naturalHeight;
@@ -69,18 +80,7 @@ export function buildGeometryCanvas(img, rotation, crop) {
   ctx.translate(W / 2, H / 2);
   ctx.rotate(rad);
   ctx.drawImage(img, -w0 / 2, -h0 / 2);
-  if (crop) {
-    const cw = Math.max(1, Math.min(crop.w, W - crop.x));
-    const ch = Math.max(1, Math.min(crop.h, H - crop.y));
-    const cx = clamp(crop.x, 0, W - 1);
-    const cy = clamp(crop.y, 0, H - 1);
-    const cc = document.createElement('canvas');
-    cc.width = cw; cc.height = ch;
-    const cctx = cc.getContext('2d');
-    cctx.drawImage(c, cx, cy, cw, ch, 0, 0, cw, ch);
-    return cc;
-  }
-  return c;
+  return crop ? cropCanvas(c, crop) : c;
 }
 
 function rgbToHsl(r, g, b) {

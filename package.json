@@ -1,12 +1,19 @@
 {
   "name": "violet-photo-editor",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.1.0",
+  "description": "A fast, private, on-device photo editor with auto enhance, stackable filters, crop and artistic effects.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MidnightRaven9/violet-photo-editor.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4173"
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "shots": "node scripts/shots.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -14,6 +21,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
+    "playwright": "^1.65.1",
     "vite": "^5.4.8",
     "vite-plugin-singlefile": "^2.3.4"
   }

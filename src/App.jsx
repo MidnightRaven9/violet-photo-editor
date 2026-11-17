@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Icon from './icons.jsx';
 import {
   loadImage,
   buildGeometryCanvas,
+  cropCanvas,
   applyColor,
   computeWhiteBalanceFactors,
   computeEnhanceParams,
@@ -33,26 +35,26 @@ const DEFAULT_SETTINGS = {
 };
 
 const ENHANCEMENTS = [
-  { id: 'auto', name: 'Auto Enhance', emoji: '✨', settings: { autoEnhance: true } },
-  { id: 'wb', name: 'Auto White Balance', emoji: '🌡️', settings: { autoColor: true } },
-  { id: 'ai', name: 'AI Enhance', emoji: '🪄', settings: { autoEnhance: true, autoColor: true, clarity: 30, saturation: 15 } },
-  { id: 'hdr', name: 'HDR', emoji: '🌄', settings: { clarity: 40, contrast: 15, saturation: 10 } },
-  { id: 'dehaze', name: 'Dehaze', emoji: '🌫️', settings: { clarity: 35, contrast: 20, saturation: 15 } },
-  { id: 'sharpen', name: 'Sharpen', emoji: '🔪', settings: { sharpness: 45 } },
-  { id: 'highpass', name: 'High Pass', emoji: '📈', settings: { sharpness: 70, clarity: 25 } },
-  { id: 'details', name: 'Details Equalizer', emoji: '🔎', settings: { clarity: 55 } },
-  { id: 'deblur', name: 'Deblur', emoji: '🌀', settings: { sharpness: 65, contrast: 10 } },
-  { id: 'denoise', name: 'Denoise', emoji: '🧹', settings: { denoise: 55 } },
-  { id: 'smooth', name: 'Smooth', emoji: '💧', settings: { soften: 45, denoise: 25 } },
-  { id: 'portrait', name: 'Portrait Light', emoji: '🙂', settings: { brightness: 12, exposure: 8, clarity: 15, temperature: 6 } },
-  { id: 'vivid', name: 'Vivid', emoji: '🌈', settings: { saturation: 40, contrast: 20 } },
-  { id: 'warm', name: 'Warm', emoji: '☀️', settings: { temperature: 32, saturation: 8 } },
-  { id: 'cool', name: 'Cool', emoji: '❄️', settings: { temperature: -32 } },
-  { id: 'bw', name: 'Black & White', emoji: '⚫', settings: { saturation: -100, contrast: 12 } },
-  { id: 'vintage', name: 'Vintage', emoji: '📷', settings: { temperature: 20, saturation: -20, contrast: -10 } },
-  { id: 'fade', name: 'Fade', emoji: '🕊️', settings: { contrast: -22, brightness: 10 } },
-  { id: 'cinema', name: 'Cinematic', emoji: '🎬', settings: { contrast: 18, temperature: -10, saturation: 15 } },
-  { id: 'hotpixel', name: 'Remove Hot Pixels', emoji: '🔧', settings: { denoise: 35 } },
+  { id: 'auto', name: 'Auto Enhance', icon: 'sparkles', sub: 'Balanced light and color', settings: { autoEnhance: true } },
+  { id: 'wb', name: 'Auto White Balance', icon: 'sun', sub: 'Remove color casts', settings: { autoColor: true } },
+  { id: 'ai', name: 'Smart Enhance', icon: 'wand', sub: 'Light, color and clarity', settings: { autoEnhance: true, autoColor: true, clarity: 30, saturation: 15 } },
+  { id: 'hdr', name: 'HDR', icon: 'contrast', sub: 'Lift shadows, tame highlights', settings: { clarity: 40, contrast: 15, saturation: 10 } },
+  { id: 'dehaze', name: 'Dehaze', icon: 'droplet', sub: 'Cut through haze and fog', settings: { clarity: 35, contrast: 20, saturation: 15 } },
+  { id: 'sharpen', name: 'Sharpen', icon: 'sharpen', sub: 'Crisper, defined edges', settings: { sharpness: 45 } },
+  { id: 'highpass', name: 'High Pass', icon: 'sharpen', sub: 'Fine detail boost', settings: { sharpness: 70, clarity: 25 } },
+  { id: 'details', name: 'Detail Equalizer', icon: 'sliders', sub: 'Reveal micro-contrast', settings: { clarity: 55 } },
+  { id: 'deblur', name: 'Deblur', icon: 'sharpen', sub: 'Recover soft focus', settings: { sharpness: 65, contrast: 10 } },
+  { id: 'denoise', name: 'Denoise', icon: 'droplet', sub: 'Smooth sensor grain', settings: { denoise: 55 } },
+  { id: 'smooth', name: 'Smooth', icon: 'droplet', sub: 'Soft, skin-friendly finish', settings: { soften: 45, denoise: 25 } },
+  { id: 'portrait', name: 'Portrait Light', icon: 'portrait', sub: 'Flattering skin tones', settings: { brightness: 12, exposure: 8, clarity: 15, temperature: 6 } },
+  { id: 'vivid', name: 'Vivid', icon: 'palette', sub: 'Punchy, saturated color', settings: { saturation: 40, contrast: 20 } },
+  { id: 'warm', name: 'Warm', icon: 'sun', sub: 'Golden, cozy tones', settings: { temperature: 32, saturation: 8 } },
+  { id: 'cool', name: 'Cool', icon: 'snow', sub: 'Crisp blue cast', settings: { temperature: -32 } },
+  { id: 'bw', name: 'Black & White', icon: 'contrast', sub: 'Classic monochrome', settings: { saturation: -100, contrast: 12 } },
+  { id: 'vintage', name: 'Vintage', icon: 'camera', sub: 'Soft film nostalgia', settings: { temperature: 20, saturation: -20, contrast: -10 } },
+  { id: 'fade', name: 'Fade', icon: 'sun', sub: 'Matte, lifted blacks', settings: { contrast: -22, brightness: 10 } },
+  { id: 'cinema', name: 'Cinematic', icon: 'film', sub: 'Teal-and-orange drama', settings: { contrast: 18, temperature: -10, saturation: 15 } },
+  { id: 'hotpixel', name: 'Remove Hot Pixels', icon: 'reset', sub: 'Clean up bright specks', settings: { denoise: 35 } },
 ];
 
 const FILTER_CATS = [
@@ -162,6 +164,48 @@ const FILTERS = [
   { id: 'stainedGlass', name: 'Stained Glass', cat: 'artistic', settings: { effect: 'mosaic', saturation: 50, contrast: 20 } },
 ];
 
+const ADJUST_GROUPS = [
+  ['Light', [
+    ['exposure', 'Exposure', -100, 100],
+    ['brightness', 'Brightness', -100, 100],
+    ['contrast', 'Contrast', -100, 100],
+  ]],
+  ['Color', [
+    ['saturation', 'Saturation', -100, 100],
+    ['vibrance', 'Vibrance', -100, 100],
+    ['temperature', 'Warmth', -100, 100],
+    ['tint', 'Tint', -100, 100],
+    ['hue', 'Hue', -180, 180],
+  ]],
+  ['Detail', [
+    ['sharpness', 'Sharpness', 0, 100],
+    ['clarity', 'Clarity', 0, 100],
+    ['denoise', 'Denoise', 0, 100],
+    ['soften', 'Soften', 0, 100],
+  ]],
+  ['Creative', [
+    ['posterize', 'Posterize', 0, 16],
+  ]],
+];
+
+const TABS = [
+  ['suggest', 'Suggestions', 'sparkles'],
+  ['crop', 'Crop', 'crop'],
+  ['adjust', 'Adjust', 'sliders'],
+  ['filters', 'Filters', 'filters'],
+  ['stack', 'Stack', 'stack'],
+  ['view', 'View', 'eye'],
+];
+
+const PANEL_HEADINGS = {
+  suggest: ['Suggested', 'One-tap looks tuned to this photo'],
+  crop: ['Crop & Rotate', 'Straighten, reframe and set a ratio'],
+  adjust: ['Adjust', 'Fine-tune light, color and detail'],
+  filters: ['Filters', 'Professional presets, ready to stack'],
+  stack: ['Edit stack', 'Combine looks for total control'],
+  view: ['View', 'Zoom in to inspect the details'],
+};
+
 function sampleImageData(source, max = 480) {
   const scale = Math.min(1, max / Math.max(source.width, source.height));
   const w = Math.max(1, Math.round(source.width * scale));
@@ -180,10 +224,23 @@ function presetWithAuto(base, preset) {
   return s;
 }
 
+function PanelHead({ title, meta, right }) {
+  return (
+    <div className="panel-head">
+      <div>
+        <h2>{title}</h2>
+        {meta && <p>{meta}</p>}
+      </div>
+      {right || null}
+    </div>
+  );
+}
+
 export default function App() {
   const [img, setImg] = useState(null);
   const [rotation, setRotation] = useState(0);
   const [crop, setCrop] = useState(null);
+  const [ratio, setRatio] = useState('Free');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [cropMode, setCropMode] = useState(false);
   const [tab, setTab] = useState('suggest');
@@ -195,17 +252,50 @@ export default function App() {
   const [filterCat, setFilterCat] = useState('effects');
   const [exporting, setExporting] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [fit, setFit] = useState({ w: 0, h: 0 });
+  const [toast, setToast] = useState(null);
 
   const previewCanvasRef = useRef(null);
   const geomCanvasRef = useRef(null);
+  const baseGeomRef = useRef(null);
   const previewScaleRef = useRef(1);
-  const previewSizeRef = useRef({ w: 0, h: 0 });
+  const stageScrollRef = useRef(null);
+  const toastTimer = useRef(null);
+
+  const notify = useCallback((message) => {
+    setToast(message);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 1900);
+  }, []);
+
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  // measure the available stage area so the preview always fits the screen
+  useEffect(() => {
+    const el = stageScrollRef.current;
+    if (!el || !img) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      setFit((prev) => (
+        Math.abs(prev.w - r.width) < 1 && Math.abs(prev.h - r.height) < 1
+          ? prev
+          : { w: r.width, h: r.height }
+      ));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [img]);
 
   // rebuild geometry canvas when img/rotation/crop change
   useEffect(() => {
-    if (!img) { geomCanvasRef.current = null; return; }
-    const gc = buildGeometryCanvas(img, rotation, crop);
-    geomCanvasRef.current = gc;
+    if (!img) { geomCanvasRef.current = null; baseGeomRef.current = null; return; }
+    // Base canvas is the rotated photo only; crop math always works against it
+    // so repeated ratio changes stay centered on the original frame.
+    const base = buildGeometryCanvas(img, rotation, null);
+    baseGeomRef.current = base;
+    geomCanvasRef.current = crop ? cropCanvas(base, crop) : base;
     // reset auto params when geometry changes
     setSettings((prev) => ({ ...prev, autoColorFactors: null, autoEnhanceParams: null }));
   }, [img, rotation, crop]);
@@ -215,7 +305,7 @@ export default function App() {
     const gc = geomCanvasRef.current;
     if (!gc) { setThumbs({}); return; }
     let cancelled = false;
-    const base = sampleImageData(gc, 96);
+    const base = sampleImageData(gc, 128);
     const result = {};
     const all = [
       ...ENHANCEMENTS.map((p) => ['en:' + p.id, p]),
@@ -239,12 +329,17 @@ export default function App() {
     const canvas = previewCanvasRef.current;
     if (!gc || !canvas) return;
     const maxDim = Math.max(gc.width, gc.height);
-    const baseScale = maxDim > MAX_PREVIEW ? MAX_PREVIEW / maxDim : 1;
-    const scale = baseScale * zoom;
+    const availW = Math.max(120, (fit.w || 360) - 24);
+    const availH = Math.max(120, (fit.h || 420) - 24);
+    const baseScale = Math.min(
+      availW / gc.width,
+      availH / gc.height,
+      MAX_PREVIEW / maxDim,
+    );
+    const scale = Math.max(0.02, baseScale * zoom);
     previewScaleRef.current = scale;
     const pw = Math.max(1, Math.round(gc.width * scale));
     const ph = Math.max(1, Math.round(gc.height * scale));
-    previewSizeRef.current = { w: pw, h: ph };
 
     const tmp = document.createElement('canvas');
     tmp.width = pw; tmp.height = ph;
@@ -268,9 +363,20 @@ export default function App() {
     canvas.width = pw;
     canvas.height = ph;
     canvas.getContext('2d').putImageData(out, 0, 0);
-  }, [settings, zoom, holding, stack]);
+  }, [settings, zoom, holding, stack, fit]);
 
   useEffect(() => { renderPreview(); }, [renderPreview, img, rotation, crop, zoom, holding]);
+
+  const resetSession = () => {
+    setRotation(0);
+    setCrop(null);
+    setRatio('Free');
+    setZoom(1);
+    setSettings({ ...DEFAULT_SETTINGS });
+    setStack([]);
+    setCropMode(false);
+    setTab('suggest');
+  };
 
   const handleFile = async (e) => {
     const f = e.target.files?.[0];
@@ -278,12 +384,8 @@ export default function App() {
     setFileName(f.name);
     const image = await loadImage(f);
     setImg(image);
-    setRotation(0);
-    setCrop(null);
-    setZoom(1);
-    setSettings({ ...DEFAULT_SETTINGS });
-    setStack([]);
-    setCropMode(false);
+    resetSession();
+    e.target.value = '';
   };
 
   const handleDrop = async (e) => {
@@ -293,48 +395,22 @@ export default function App() {
     setFileName(f.name);
     const image = await loadImage(f);
     setImg(image);
-    setRotation(0);
-    setCrop(null);
-    setZoom(1);
-    setSettings({ ...DEFAULT_SETTINGS });
-    setStack([]);
-    setCropMode(false);
+    resetSession();
   };
 
   const updateSetting = (key, val) => {
     setSettings((p) => ({ ...p, [key]: val }));
   };
 
-  const toggleAutoColor = () => {
-    setSettings((prev) => {
-      const next = { ...prev, autoColor: !prev.autoColor };
-      if (next.autoColor && !next.autoColorFactors && geomCanvasRef.current) {
-        const gc = geomCanvasRef.current;
-        const fullData = gc.getContext('2d').getImageData(0, 0, gc.width, gc.height);
-        next.autoColorFactors = computeWhiteBalanceFactors(fullData);
-      }
-      return next;
-    });
-  };
-  const toggleAutoEnhance = () => {
-    setSettings((prev) => {
-      const next = { ...prev, autoEnhance: !prev.autoEnhance };
-      if (next.autoEnhance && !next.autoEnhanceParams && geomCanvasRef.current) {
-        const gc = geomCanvasRef.current;
-        const fullData = gc.getContext('2d').getImageData(0, 0, gc.width, gc.height);
-        next.autoEnhanceParams = computeEnhanceParams(fullData);
-      }
-      return next;
-    });
-  };
-
   const rotateBy = (deg) => {
     setRotation((r) => r + deg);
     setCrop(null);
+    setRatio('Free');
   };
   const setRotationVal = (v) => {
     setRotation(v);
     setCrop(null);
+    setRatio('Free');
   };
 
   // crop drag handlers
@@ -374,6 +450,7 @@ export default function App() {
           w: Math.round(pw / scale),
           h: Math.round(ph / scale),
         });
+        setRatio('Free');
       }
       setDrag(null);
       setCropMode(false);
@@ -382,15 +459,11 @@ export default function App() {
     setHolding(false);
   };
 
-  const resetCrop = () => setCrop(null);
+  const resetCrop = () => { setCrop(null); setRatio('Free'); };
   const resetAll = () => {
     if (!img) return;
-    setRotation(0);
-    setCrop(null);
-    setZoom(1);
-    setSettings({ ...DEFAULT_SETTINGS });
-    setStack([]);
-    setCropMode(false);
+    resetSession();
+    notify('All edits reset');
   };
 
   const handleExport = async () => {
@@ -416,6 +489,7 @@ export default function App() {
       if (window.Violet && typeof window.Violet.saveImage === 'function') {
         window.Violet.saveImage(c.toDataURL('image/jpeg', 0.92), base + '-violet.jpg');
         setExporting(false);
+        notify('Saved to Pictures/Violet');
         return;
       }
       const downloadName = base + '-violet.png';
@@ -429,22 +503,33 @@ export default function App() {
         a.remove();
         URL.revokeObjectURL(url);
         setExporting(false);
+        notify('Photo exported');
       }, 'image/png');
     } catch (err) {
       console.error(err);
       setExporting(false);
+      notify('Export failed');
     }
   };
 
-  const applyAspectRatio = (ratio) => {
-    const gc = geomCanvasRef.current;
-    if (!gc) return;
-    const W = gc.width, H = gc.height;
+  const applyAspectRatio = (value, label) => {
+    const base = baseGeomRef.current;
+    if (!base) return;
+    const W = base.width, H = base.height;
+    setRatio(label);
+    if (value === null) { setCrop(null); return; }
     let cw, ch;
-    if (ratio === null) { setCrop(null); return; }
-    if (W / H > ratio) { ch = H; cw = Math.round(H * ratio); }
-    else { cw = W; ch = Math.round(W / ratio); }
+    if (W / H > value) { ch = H; cw = Math.round(H * value); }
+    else { cw = W; ch = Math.round(W / value); }
     setCrop({ x: Math.round((W - cw) / 2), y: Math.round((H - ch) / 2), w: cw, h: ch });
+  };
+
+  const toggleCropMode = () => {
+    setCropMode((active) => {
+      // start a fresh selection from the full frame
+      if (!active) { setCrop(null); setRatio('Free'); }
+      return !active;
+    });
   };
 
   const togglePreset = (preset, key) => {
@@ -472,6 +557,7 @@ export default function App() {
     });
   };
   const clearStack = () => setStack([]);
+  const changeZoom = (factor) => setZoom((z) => clamp(+(z * factor).toFixed(2), 0.5, 4));
 
   // drag overlay rect
   let overlayRect = null;
@@ -484,203 +570,330 @@ export default function App() {
     };
   }
 
-  // existing crop overlay in preview coords
-  let cropOverlay = null;
-  if (crop && !drag) {
-    const scale = previewScaleRef.current;
-    cropOverlay = {
-      left: crop.x * scale,
-      top: crop.y * scale,
-      width: crop.w * scale,
-      height: crop.h * scale,
-    };
-  }
+  const heading = PANEL_HEADINGS[tab];
+  const catLabel = FILTER_CATS.find(([id]) => id === filterCat)?.[1] || '';
 
   return (
-    <div className="app" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
+    <div
+      className="app"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={handleDrop}
+    >
       <header className="topbar">
-        <button className="icon-btn" onClick={() => { setImg(null); }} title="Back">←</button>
-        <h1>Violet Photo Editor</h1>
+        <div className="brand">
+          <span className="brand-mark">
+            <Icon name="sparkles" size={16} strokeWidth={1.9} />
+          </span>
+          <div className="brand-text">
+            <h1>Violet</h1>
+            <span>{img ? (fileName || 'Untitled photo') : 'Photo Editor'}</span>
+          </div>
+        </div>
         <div className="topbar-actions">
           {img && (
-            <>
-              <button className="icon-btn" onClick={resetAll} title="Reset">↺</button>
-              <button className="btn primary small" onClick={handleExport} disabled={exporting}>
-                {exporting ? '…' : 'Save'}
-              </button>
-            </>
+            <button className="icon-btn" onClick={resetAll} title="Reset all edits" aria-label="Reset all edits">
+              <Icon name="reset" size={18} />
+            </button>
           )}
-          <label className="btn small">
-            Upload
-            <input type="file" accept="image/*" onChange={handleFile} hidden />
-          </label>
+          {img && (
+            <button className="btn-primary" onClick={handleExport} disabled={exporting} aria-label="Save photo">
+              {exporting ? <span className="spinner" /> : <Icon name="save" size={15} />}
+              <span>{exporting ? 'Saving' : 'Save'}</span>
+            </button>
+          )}
+          {img && (
+            <label className="icon-btn file-btn" title="Open another photo">
+              <Icon name="upload" size={18} />
+              <input type="file" accept="image/*" onChange={handleFile} hidden />
+            </label>
+          )}
         </div>
       </header>
 
       {!img ? (
-        <div className="dropzone">
-          <p>Drop an image here or use Upload</p>
+        <div className="empty">
+          <div className="empty-card">
+            <div className="empty-icon">
+              <Icon name="image" size={30} strokeWidth={1.5} />
+            </div>
+            <h2>Start with a photo</h2>
+            <p>Drop an image here, or open one from your library to begin editing.</p>
+            <label className="btn-primary empty-cta">
+              <Icon name="upload" size={16} />
+              <span>Open photo</span>
+              <input type="file" accept="image/*" onChange={handleFile} hidden />
+            </label>
+            <span className="drop-hint">JPG, PNG, WebP · up to full resolution</span>
+            <div className="feature-row">
+              <span className="feature-chip"><Icon name="check" size={12} /> On-device</span>
+              <span className="feature-chip"><Icon name="check" size={12} /> No sign-in</span>
+              <span className="feature-chip"><Icon name="check" size={12} /> Non-destructive</span>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="editor">
-          <div className="canvas-stage">
-            <div
-              className="canvas-container"
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerLeave={onPointerUp}
-            >
-              <canvas ref={previewCanvasRef} />
-              {overlayRect && (
-                <div className="crop-overlay drag" style={overlayRect} />
-              )}
-              {cropOverlay && (
-                <div className="crop-overlay saved" style={cropOverlay} />
-              )}
+          <div className="stage">
+            <div className="canvas-scroll" ref={stageScrollRef}>
+              <div
+                className="canvas-container"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerLeave={onPointerUp}
+              >
+                <canvas ref={previewCanvasRef} />
+                {overlayRect && (
+                  <div className="crop-overlay drag" style={overlayRect} />
+                )}
+                {holding && (
+                  <span className="compare-badge">
+                    <Icon name="eye" size={12} /> Original
+                  </span>
+                )}
+              </div>
             </div>
-            {crop && (
-              <div className="crop-info">
-                Crop {crop.w}×{crop.h}
-                <button className="btn small ghost" onClick={resetCrop}>Clear</button>
+
+            <div className="stage-foot">
+              <div className="zoom-pill">
+                <button onClick={() => changeZoom(1 / 1.25)} aria-label="Zoom out">
+                  <Icon name="minus" size={14} />
+                </button>
+                <span>{Math.round(zoom * 100)}%</span>
+                <button onClick={() => changeZoom(1.25)} aria-label="Zoom in">
+                  <Icon name="plus" size={14} />
+                </button>
+              </div>
+              <span className="hold-hint">
+                <Icon name="eye" size={13} /> Hold to compare
+              </span>
+            </div>
+
+            {toast && (
+              <div className="toast" role="status" aria-live="polite">
+                <span className="dot" />
+                {toast}
               </div>
             )}
-            <p className="hint center">Hold photo to compare with original · Zoom {Math.round(zoom * 100)}%</p>
           </div>
 
-          <nav className="tabbar">
-            {[
-              ['suggest', 'Suggestions'],
-              ['crop', 'Crop'],
-              ['adjust', 'Adjust'],
-              ['filters', 'Filters'],
-              ['stack', stack.length ? `Stack (${stack.length})` : 'Stack'],
-              ['view', 'View'],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                className={'tab' + (tab === id ? ' active' : '')}
-                onClick={() => setTab(id)}
-              >{label}</button>
-            ))}
-          </nav>
+          <div className="dock">
+            <nav className="tabbar" aria-label="Editor tools">
+              {TABS.map(([id, label, icon]) => (
+                <button
+                  key={id}
+                  className={'tab' + (tab === id ? ' active' : '')}
+                  onClick={() => setTab(id)}
+                  aria-label={label}
+                  data-testid={'tab-' + id}
+                >
+                  <span className="tab-icon">
+                    <Icon name={icon} size={19} />
+                    {id === 'stack' && stack.length > 0 && (
+                      <span className="tab-count">{stack.length}</span>
+                    )}
+                  </span>
+                  <span className="tab-label">{label}</span>
+                </button>
+              ))}
+            </nav>
 
-          <div className="panel">
-            {tab === 'suggest' && (
-              <div className="enhance-list">
-                {ENHANCEMENTS.map((item) => (
-                  <button
-                    key={item.id}
-                    className={'enhance-card' + (inStack('en:' + item.id) ? ' active' : '')}
-                    onClick={() => togglePreset(item, 'en:' + item.id)}
-                  >
-                    <span className="enhance-thumb">
-                      {thumbs['en:' + item.id]
-                        ? <img src={thumbs['en:' + item.id]} alt="" />
-                        : <span className="thumb-fallback">{item.emoji}</span>}
-                      <span className="thumb-play">▶</span>
-                    </span>
-                    <span className="enhance-name">{item.name}</span>
-                    <span className="enhance-check">{inStack('en:' + item.id) ? '✓' : ''}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="panel">
+              <div className="sheet-handle" />
+              <PanelHead
+                title={heading[0]}
+                meta={
+                  tab === 'filters'
+                    ? `${FILTERS.length} presets · ${catLabel}`
+                    : tab === 'stack'
+                      ? (stack.length
+                        ? `${stack.length} layer${stack.length > 1 ? 's' : ''} · applied in order`
+                        : 'Nothing stacked yet')
+                      : heading[1]
+                }
+                right={
+                  tab === 'stack' && stack.length > 0 ? (
+                    <button className="text-btn" onClick={clearStack}>Clear all</button>
+                  ) : null
+                }
+              />
 
-            {tab === 'crop' && (
-              <div className="stack">
-                <div className="row center">
-                  <button className="icon-btn" onClick={() => rotateBy(-90)}>↺ 90°</button>
-                  <button className="icon-btn" onClick={() => rotateBy(90)}>↻ 90°</button>
-                  <button className={'icon-btn' + (cropMode ? ' active' : '')} onClick={() => setCropMode((v) => !v)}>
-                    {cropMode ? 'Done' : 'Crop'}
-                  </button>
+              {tab === 'suggest' && (
+                <div className="enhance-list">
+                  {ENHANCEMENTS.map((item) => {
+                    const key = 'en:' + item.id;
+                    const active = inStack(key);
+                    return (
+                      <button
+                        key={item.id}
+                        className={'enhance-card' + (active ? ' active' : '')}
+                        onClick={() => togglePreset(item, key)}
+                        data-testid={'enh-' + item.id}
+                      >
+                        <span className="enhance-thumb">
+                          {thumbs[key]
+                            ? <img src={thumbs[key]} alt="" />
+                            : <Icon name={item.icon} size={19} />}
+                        </span>
+                        <span className="enhance-text">
+                          <span className="enhance-name">{item.name}</span>
+                          <span className="enhance-sub">{item.sub}</span>
+                        </span>
+                        <span className={'add-toggle' + (active ? ' on' : '')}>
+                          <Icon name={active ? 'check' : 'plus'} size={14} />
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="row center wrap">
-                  {[
-                    ['Free', null],
-                    ['1:1', 1],
-                    ['4:3', 4 / 3],
-                    ['16:9', 16 / 9],
-                    ['3:4', 3 / 4],
-                  ].map(([label, ratio]) => (
-                    <button key={label} className="chip" onClick={() => applyAspectRatio(ratio)}>{label}</button>
-                  ))}
-                </div>
-                <label className="slider">
-                  <span>Rotation {rotation}°</span>
-                  <input type="range" min="-180" max="180" value={rotation}
-                    onChange={(e) => setRotationVal(Number(e.target.value))} />
-                </label>
-              </div>
-            )}
+              )}
 
-            {tab === 'adjust' && (
-              <div className="adjust-grid">
-                {[
-                  ['brightness', 'Brightness', -100, 100, 1],
-                  ['contrast', 'Contrast', -100, 100, 1],
-                  ['exposure', 'Exposure', -100, 100, 1],
-                  ['saturation', 'Saturation', -100, 100, 1],
-                  ['vibrance', 'Vibrance', -100, 100, 1],
-                  ['hue', 'Hue', -180, 180, 1],
-                  ['temperature', 'Warmth', -100, 100, 1],
-                  ['tint', 'Tint', -100, 100, 1],
-                  ['sharpness', 'Sharpness', 0, 100, 1],
-                  ['clarity', 'Clarity', 0, 100, 1],
-                  ['denoise', 'Denoise', 0, 100, 1],
-                  ['soften', 'Soften', 0, 100, 1],
-                  ['posterize', 'Posterize', 0, 16, 1],
-                ].map(([key, label, min, max, step]) => (
-                  <label className="slider" key={key}>
-                    <span>{label} <b>{settings[key]}</b></span>
-                    <input
-                      type="range"
-                      min={min} max={max} step={step}
-                      value={settings[key]}
-                      onChange={(e) => updateSetting(key, Number(e.target.value))}
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {tab === 'filters' && (
-              <div className="filter-panel">
-                <div className="cat-tabs">
-                  {FILTER_CATS.map(([id, label]) => (
-                    <button
-                      key={id}
-                      className={'cat-tab' + (filterCat === id ? ' active' : '')}
-                      onClick={() => setFilterCat(id)}
-                    >{label}</button>
-                  ))}
-                </div>
-                <div className="filter-grid">
-                  {FILTERS.filter((f) => f.cat === filterCat).map((f) => (
-                    <button
-                      key={f.id}
-                      className={'filter-card' + (inStack('fl:' + f.id) ? ' active' : '')}
-                      onClick={() => togglePreset(f, 'fl:' + f.id)}
-                    >
-                      <span className="filter-thumb">
-                        {thumbs['fl:' + f.id]
-                          ? <img src={thumbs['fl:' + f.id]} alt="" />
-                          : <span className="filter-placeholder" />}
-                      </span>
-                      <span className="filter-name">{f.name}</span>
+              {tab === 'crop' && (
+                <div className="crop-panel">
+                  <div className="crop-actions">
+                    <button className="tool-btn" onClick={() => rotateBy(-90)}>
+                      <Icon name="rotateLeft" size={19} />
+                      <span>Rotate left</span>
                     </button>
+                    <button className="tool-btn" onClick={() => rotateBy(90)}>
+                      <Icon name="rotateRight" size={19} />
+                      <span>Rotate right</span>
+                    </button>
+                    <button
+                      className={'tool-btn' + (cropMode ? ' on' : '')}
+                      onClick={toggleCropMode}
+                      data-testid="crop-toggle"
+                    >
+                      <Icon name={cropMode ? 'check' : 'crop'} size={19} />
+                      <span>{cropMode ? 'Done' : 'Crop'}</span>
+                    </button>
+                  </div>
+
+                  <div className="chip-row">
+                    {[
+                      ['Free', null],
+                      ['1:1', 1],
+                      ['4:3', 4 / 3],
+                      ['16:9', 16 / 9],
+                      ['3:4', 3 / 4],
+                    ].map(([label, value]) => (
+                      <button
+                        key={label}
+                        className={'chip' + (ratio === label ? ' active' : '')}
+                        onClick={() => applyAspectRatio(value, label)}
+                        data-testid={'ratio-' + label.replace(':', '-')}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="slider-row">
+                    <div className="slider-head">
+                      <span>Angle</span>
+                      <b>{rotation}°</b>
+                    </div>
+                    <input
+                      type="range" min="-180" max="180" value={rotation}
+                      onChange={(e) => setRotationVal(Number(e.target.value))}
+                      aria-label="Rotation angle"
+                    />
+                  </div>
+
+                  {crop ? (
+                    <div className="crop-meta">
+                      <span>Selection {crop.w} × {crop.h} px</span>
+                      <button className="text-btn" onClick={resetCrop}>Reset crop</button>
+                    </div>
+                  ) : (
+                    <p className="panel-note">
+                      {cropMode
+                        ? 'Drag over the photo to set your crop, then release to apply.'
+                        : 'Tap the crop tool, then drag over the photo to set a custom selection.'}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {tab === 'adjust' && (
+                <div className="adjust-panel">
+                  {ADJUST_GROUPS.map(([group, rows]) => (
+                    <div className="adjust-group" key={group}>
+                      <h3 className="group-title">{group}</h3>
+                      {rows.map(([key, label, min, max]) => (
+                        <div className="slider-row" key={key}>
+                          <div className="slider-head">
+                            <span>{label}</span>
+                            <b>{settings[key]}</b>
+                          </div>
+                          <input
+                            type="range"
+                            min={min} max={max} step="1"
+                            value={settings[key]}
+                            onChange={(e) => updateSetting(key, Number(e.target.value))}
+                            aria-label={label}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            {tab === 'stack' && (
-              <div className="stack-panel">
-                {stack.length === 0 ? (
-                  <p className="hint">Tap any filter in Suggestions or Filters to add it here. Stack several filters and tune each one's strength.</p>
-                ) : (
-                  <>
+              {tab === 'filters' && (
+                <div className="filter-panel">
+                  <div className="cat-tabs">
+                    {FILTER_CATS.map(([id, label]) => (
+                      <button
+                        key={id}
+                        className={'cat-tab' + (filterCat === id ? ' active' : '')}
+                        onClick={() => setFilterCat(id)}
+                        data-testid={'cat-' + id}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="filter-grid">
+                    {FILTERS.filter((f) => f.cat === filterCat).map((f) => {
+                      const key = 'fl:' + f.id;
+                      const active = inStack(key);
+                      return (
+                        <button
+                          key={f.id}
+                          className={'filter-card' + (active ? ' active' : '')}
+                          onClick={() => togglePreset(f, key)}
+                          data-testid={'filter-' + f.id}
+                        >
+                          <span className="filter-thumb">
+                            {thumbs[key]
+                              ? <img src={thumbs[key]} alt="" />
+                              : <span className="filter-placeholder" />}
+                            {active && (
+                              <span className="thumb-check">
+                                <Icon name="check" size={11} strokeWidth={2.4} />
+                              </span>
+                            )}
+                          </span>
+                          <span className="filter-name">{f.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {tab === 'stack' && (
+                <div className="stack-panel">
+                  {stack.length === 0 ? (
+                    <div className="empty-panel">
+                      <span className="empty-ring">
+                        <Icon name="layers" size={21} />
+                      </span>
+                      <h3>Build your look</h3>
+                      <p>Tap any suggestion or filter to add it here. Stack several looks, then tune each one's strength.</p>
+                    </div>
+                  ) : (
                     <div className="layer-list">
                       {stack.map((l, idx) => (
                         <div className="layer" key={l.key}>
@@ -689,37 +902,81 @@ export default function App() {
                           </span>
                           <div className="layer-body">
                             <div className="layer-head">
-                              <span className="layer-name">{l.preset.name}</span>
+                              <span className="layer-name">
+                                <span className="layer-index">{String(idx + 1).padStart(2, '0')}</span>
+                                {l.preset.name}
+                              </span>
                               <span className="layer-actions">
-                                <button className="mini" onClick={() => moveLayer(l.key, -1)} disabled={idx === 0}>↑</button>
-                                <button className="mini" onClick={() => moveLayer(l.key, 1)} disabled={idx === stack.length - 1}>↓</button>
-                                <button className="mini" onClick={() => removeLayer(l.key)}>×</button>
+                                <button
+                                  className="mini" onClick={() => moveLayer(l.key, -1)}
+                                  disabled={idx === 0} aria-label="Move layer up"
+                                >
+                                  <Icon name="up" size={13} />
+                                </button>
+                                <button
+                                  className="mini" onClick={() => moveLayer(l.key, 1)}
+                                  disabled={idx === stack.length - 1} aria-label="Move layer down"
+                                >
+                                  <Icon name="down" size={13} />
+                                </button>
+                                <button
+                                  className="mini" onClick={() => removeLayer(l.key)} aria-label="Remove layer"
+                                >
+                                  <Icon name="close" size={13} />
+                                </button>
                               </span>
                             </div>
-                            <input
-                              type="range" min="0" max="100"
-                              value={l.strength}
-                              onChange={(e) => setLayerStrength(l.key, Number(e.target.value))}
-                            />
-                            <span className="layer-strength">Strength {l.strength}%</span>
+                            <div className="layer-strength-row">
+                              <input
+                                type="range" min="0" max="100"
+                                value={l.strength}
+                                onChange={(e) => setLayerStrength(l.key, Number(e.target.value))}
+                                aria-label={`${l.preset.name} strength`}
+                              />
+                              <span className="layer-strength">{l.strength}%</span>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <button className="btn small" onClick={clearStack}>Clear all</button>
-                  </>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-            {tab === 'view' && (
-              <div className="row center">
-                <button className="icon-btn" onClick={() => setZoom((z) => Math.max(0.5, +(z / 1.25).toFixed(2)))}>−</button>
-                <span className="zoom-label">{Math.round(zoom * 100)}%</span>
-                <button className="icon-btn" onClick={() => setZoom((z) => Math.min(4, +(z * 1.25).toFixed(2)))}>+</button>
-                <button className="icon-btn" onClick={() => setZoom(1)}>Reset</button>
-              </div>
-            )}
+              {tab === 'view' && (
+                <div className="view-panel">
+                  <div className="zoom-card">
+                    <div className="zoom-big">
+                      <button onClick={() => changeZoom(1 / 1.25)} aria-label="Zoom out">
+                        <Icon name="minus" size={18} />
+                      </button>
+                      <span className="zoom-value">{Math.round(zoom * 100)}%</span>
+                      <button onClick={() => changeZoom(1.25)} aria-label="Zoom in">
+                        <Icon name="plus" size={18} />
+                      </button>
+                    </div>
+                    <button className="icon-btn" onClick={() => setZoom(1)} title="Fit to screen">
+                      <Icon name="fit" size={18} />
+                    </button>
+                  </div>
+                  <div className="zoom-presets">
+                    {[0.5, 1, 2, 4].map((z) => (
+                      <button
+                        key={z}
+                        className={'chip' + (Math.abs(zoom - z) < 0.01 ? ' active' : '')}
+                        onClick={() => setZoom(z)}
+                      >
+                        {z === 1 ? 'Fit' : `${Math.round(z * 100)}%`}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="panel-note">
+                    Press and hold the photo at any time to compare your edit with the original.
+                    Zooming only changes the preview — exports stay full resolution.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
