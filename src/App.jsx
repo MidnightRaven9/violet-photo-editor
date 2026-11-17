@@ -254,6 +254,7 @@ export default function App() {
   const [fileName, setFileName] = useState('');
   const [fit, setFit] = useState({ w: 0, h: 0 });
   const [toast, setToast] = useState(null);
+  const [undoStack, setUndoStack] = useState([]);
 
   const previewCanvasRef = useRef(null);
   const geomCanvasRef = useRef(null);
@@ -466,6 +467,51 @@ export default function App() {
     notify('All edits reset');
   };
 
+  // push the current geom canvas onto the undo stack
+  const pushUndoState = useCallback(() => {
+    if (!geomCanvasRef.current) return;
+    const state = geomCanvasRef.current.cloneNode(true);
+    setUndoStack((prev) => [...prev, state]);
+    // keep only the last 20 states to avoid memory bloat
+    if (undoStack.length > 19) setUndoStack((prev) => prev.slice(1));
+  }, []);
+
+  // undo the most recent edit state
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    // restore the geom canvas from the saved state
+    if (prev && geomCanvasRef.current) {
+      geomCanvasRef.current = prev;
+      renderPreview();
+    }
+    setUndoStack((prev) => prev.slice(0, -1));
+    notify('Undo');
+  }, [undoStack, renderPreview, notify]);
+
+  // revert all edits to the original image
+  const revert = useCallback(() => {
+    if (!img) return;
+    setRotation(0);
+    setCrop(null);
+    setRatio('Free');
+    setZoom(1);
+    setSettings({ ...DEFAULT_SETTINGS });
+    setStack([]);
+    setUndoStack([]);
+    notify('All edits reverted');
+  }, [notify]);
+
+  // push undo state after geometry changes
+  useEffect(() => {
+    if (!img) { geomCanvasRef.current = null; baseGeomRef.current = null; return; }
+    const base = buildGeometryCanvas(img, rotation, null);
+    baseGeomRef.current = base;
+    geomCanvasRef.current = crop ? cropCanvas(base, crop) : base;
+    setSettings((prev) => ({ ...prev, autoColorFactors: null, autoEnhanceParams: null }));
+    pushUndoState();
+  }, [img, rotation, crop, pushUndoState]);
+
   const handleExport = async () => {
     const gc = geomCanvasRef.current;
     if (!gc) return;
@@ -591,9 +637,21 @@ export default function App() {
         </div>
         <div className="topbar-actions">
           {img && (
-            <button className="icon-btn" onClick={resetAll} title="Reset all edits" aria-label="Reset all edits">
-              <Icon name="reset" size={18} />
-            </button>
+            <>
+              <button className="icon-btn" onClick={resetAll} title="Reset all edits" aria-label="Reset all edits">
+                <Icon name="reset" size={18} />
+              </button>
+              {undoStack.length > 0 && (
+                <button className="icon-btn" onClick={undo} title="Undo" aria-label="Undo last edit">
+                  <Icon name="minus" size={16} />
+                </button>
+              )}
+              {img && (
+                <button className="icon-btn" onClick={revert} title="Revert all" aria-label="Revert all edits">
+                  <Icon name="close" size={16} />
+                </button>
+              )}
+            </>
           )}
           {img && (
             <button className="btn-primary" onClick={handleExport} disabled={exporting} aria-label="Save photo">
