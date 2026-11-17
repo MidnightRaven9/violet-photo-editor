@@ -5,8 +5,8 @@ body { font-family: -apple-system, system-ui, 'Segoe UI', sans-serif; background
 .app { display: flex; flex-direction: column; height: 100%; background: #000; }
 
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #000; }
-.topbar h1 { font-size: 18px; margin: 0; font-weight: 500; }
-.topbar-actions { display: flex; gap: 8px; align-items: center; }
+.topbar h1 { flex: 1; min-width: 0; font-size: 16px; margin: 0 8px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-actions { display: flex; gap: 6px; align-items: center; flex: 0 0 auto; }
 
 .icon-btn { background: transparent; color: #e8eaed; border: none; font-size: 20px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .icon-btn:hover { background: #2a2a2a; }
