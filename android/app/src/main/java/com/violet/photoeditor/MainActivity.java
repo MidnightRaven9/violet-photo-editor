@@ -140,9 +140,12 @@ public class MainActivity extends Activity {
                         ? "violet-" + System.currentTimeMillis() + ".png"
                         : filename;
 
+                String lower = name.toLowerCase();
+                String mime = lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg" : "image/png";
+
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.Images.Media.DISPLAY_NAME, name);
-                values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
+                values.put(MediaStore.Images.Media.MIME_TYPE, mime);
                 values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Violet");
                 values.put(MediaStore.Images.Media.IS_PENDING, 1);
 

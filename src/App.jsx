@@ -412,13 +412,13 @@ export default function App() {
       c.width = out.width; c.height = out.height;
       c.getContext('2d').putImageData(out, 0, 0);
       const base = (fileName || 'photo').replace(/\.[^.]+$/, '');
-      const downloadName = base + '-violet.png';
       // Android WebView bridge saves straight to the gallery.
       if (window.Violet && typeof window.Violet.saveImage === 'function') {
-        window.Violet.saveImage(c.toDataURL('image/png'), downloadName);
+        window.Violet.saveImage(c.toDataURL('image/jpeg', 0.92), base + '-violet.jpg');
         setExporting(false);
         return;
       }
+      const downloadName = base + '-violet.png';
       c.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

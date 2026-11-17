@@ -81,6 +81,9 @@ echo "==> Signing"
   --ks-key-alias "$ALIAS" \
   --ks-pass "pass:$STOREPASS" \
   --key-pass "pass:$KEYPASS" \
+  --v1-signing-enabled true \
+  --v2-signing-enabled true \
+  --v3-signing-enabled true \
   --out "$OUT/violet-photo-editor.apk" \
   "$OUT/aligned.apk"
 
