@@ -2,6 +2,10 @@
 
 A fast, offline photo editor with automatic enhancement, color correction, professional filters, and artistic effects. Built as a React web app and packaged as an Android APK using a lightweight WebView shell.
 
+## Download
+
+Grab the latest APK from [Releases](https://github.com/MidnightRaven9/violet-photo-editor/releases/latest). Requires Android 10 or newer.
+
 ## Features
 
 - **Auto Enhance** and **Auto Color** (white balance)
