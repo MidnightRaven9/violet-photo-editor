@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
         webView.setBackgroundColor(Color.BLACK);
         // Keep the default fitSystemWindows behaviour so the WebView is laid out
         // between the status bar and navigation bar (no cut-off UI).
+        webView.setFitsSystemWindows(true);
         setContentView(webView);
 
         WebSettings s = webView.getSettings();
